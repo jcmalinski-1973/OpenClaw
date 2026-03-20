@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pedidobk
+      POSTGRES_USER: pedidobk
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pedidobk2026}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedidobk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://pedidobk:${DB_PASSWORD:-pedidobk2026}@db:5432/pedidobk
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-financeiro-00-bucket}
+      GCS_PROJECT_ID: ${GCS_PROJECT_ID:-financeiro-489122}
+      GCS_PREFIX: ${GCS_PREFIX:-pedidos}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-gcs}
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      # Monta as credenciais ADC da VM (Application Default Credentials)
+      - /home/${HOST_USER:-jcmalinski}/.config/gcloud:/root/.config/gcloud:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+
+volumes:
+  pgdata:

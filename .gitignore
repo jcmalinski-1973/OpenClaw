@@ -1,0 +1,28 @@
+# Env
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend runtime
+backend/uploads/
+backend/output/
+
+# IDE
+.idea/
+.vscode/
+*.swp
