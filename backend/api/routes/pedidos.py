@@ -10,7 +10,9 @@ from sqlalchemy.orm import Session
 from core.exceptions import PedidoValidationError
 from db.session import get_db
 from models.pedido import Pedido
+from models.produto_pedido import ProdutoPedido
 from schemas.pedido import PedidoDetalheResponse, PedidoListResponse, PedidoResponse
+from schemas.produto_pedido import ProdutoPedidoListResponse, ProdutoPedidoResponse
 from services.pedido_service import create_pedido
 from storage import get_storage
 
@@ -86,6 +88,26 @@ def baixar_resultado(pedido_id: UUID, db: Session = Depends(get_db)):
         content=content,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=pedido-{pedido_id}.xlsx"},
+    )
+
+
+@router.get("/{pedido_id}/produtos", response_model=ProdutoPedidoListResponse)
+def listar_produtos_pedido(pedido_id: UUID, db: Session = Depends(get_db)):
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+
+    produtos = (
+        db.query(ProdutoPedido)
+        .filter(ProdutoPedido.pedido_id == pedido_id)
+        .order_by(ProdutoPedido.linha_template)
+        .all()
+    )
+
+    return ProdutoPedidoListResponse(
+        pedido_id=pedido_id,
+        items=produtos,
+        total=len(produtos),
     )
 
 
