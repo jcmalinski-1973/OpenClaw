@@ -1,38 +1,46 @@
 import { useState } from 'react'
 import UploadForm from './UploadForm'
 import Historico from './Historico'
+import ProdutosPedido from './ProdutosPedido'
 
 const TABS = ['Novo Pedido', 'Histórico']
 
 function SucessoBanner({ pedido, onNovo }) {
   return (
-    <div className="rounded-lg bg-green-50 border border-green-200 p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="text-green-600 text-xl">✓</span>
-        <h3 className="font-semibold text-green-800">Pedido processado com sucesso</h3>
+    <div className="space-y-4">
+      <div className="rounded-lg bg-green-50 border border-green-200 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="text-green-600 text-xl">✓</span>
+          <h3 className="font-semibold text-green-800">Pedido processado com sucesso</h3>
+        </div>
+        {pedido.resumo && (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-700">
+            <div><dt className="text-gray-500">Itens encontrados</dt><dd className="font-medium">{pedido.resumo.order_items_found}</dd></div>
+            <div><dt className="text-gray-500">Processados OK</dt><dd className="font-medium">{pedido.resumo.processed_ok}</dd></div>
+            <div><dt className="text-gray-500">Com adicional</dt><dd className="font-medium">{pedido.resumo.items_with_additional}</dd></div>
+            <div><dt className="text-gray-500">Tempo</dt><dd className="font-medium">{pedido.processing_time_seconds}s</dd></div>
+          </dl>
+        )}
+        <div className="flex gap-3 pt-1">
+          <a
+            href={`/pedidos/${pedido.id}/resultado`}
+            download
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700"
+          >
+            Baixar Resultado
+          </a>
+          <button
+            onClick={onNovo}
+            className="px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
+          >
+            Novo Pedido
+          </button>
+        </div>
       </div>
-      {pedido.resumo && (
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-700">
-          <div><dt className="text-gray-500">Itens encontrados</dt><dd className="font-medium">{pedido.resumo.order_items_found}</dd></div>
-          <div><dt className="text-gray-500">Processados OK</dt><dd className="font-medium">{pedido.resumo.processed_ok}</dd></div>
-          <div><dt className="text-gray-500">Com adicional</dt><dd className="font-medium">{pedido.resumo.items_with_additional}</dd></div>
-          <div><dt className="text-gray-500">Tempo</dt><dd className="font-medium">{pedido.processing_time_seconds}s</dd></div>
-        </dl>
-      )}
-      <div className="flex gap-3 pt-1">
-        <a
-          href={`/pedidos/${pedido.id}/resultado`}
-          download
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700"
-        >
-          Baixar Resultado
-        </a>
-        <button
-          onClick={onNovo}
-          className="px-4 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50"
-        >
-          Novo Pedido
-        </button>
+
+      <div className="rounded-lg border border-gray-200 p-4">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">Produtos do Pedido</h4>
+        <ProdutosPedido pedidoId={pedido.id} />
       </div>
     </div>
   )

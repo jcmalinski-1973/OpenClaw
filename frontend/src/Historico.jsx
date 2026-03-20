@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listarPedidos, urlResultado } from './api'
+import ProdutosPedido from './ProdutosPedido'
 
 const STATUS_LABEL = {
   completed: { label: 'Concluído', cls: 'bg-green-100 text-green-700' },
@@ -18,6 +19,52 @@ function Badge({ status }) {
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function PedidoRow({ pedido }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <>
+      <tr
+        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <td className="py-2 pr-2 text-gray-400 text-xs select-none w-4">
+          {expanded ? '▾' : '▸'}
+        </td>
+        <td className="py-2 pr-4 text-gray-600 whitespace-nowrap">{formatDate(pedido.created_at)}</td>
+        <td className="py-2 pr-4"><Badge status={pedido.status} /></td>
+        <td className="py-2 pr-4 text-gray-700">{pedido.resumo?.order_items_found ?? '—'}</td>
+        <td className="py-2 pr-4 text-gray-700">{pedido.resumo?.processed_ok ?? '—'}</td>
+        <td className="py-2 pr-4 text-gray-700">{pedido.resumo?.items_with_additional ?? '—'}</td>
+        <td className="py-2 pr-4 text-gray-500">{pedido.processing_time_seconds ? `${pedido.processing_time_seconds}s` : '—'}</td>
+        <td className="py-2" onClick={e => e.stopPropagation()}>
+          {pedido.status === 'completed' ? (
+            <a
+              href={urlResultado(pedido.id)}
+              className="text-blue-600 hover:underline font-medium text-sm"
+              download
+            >
+              Baixar
+            </a>
+          ) : pedido.status === 'failed' ? (
+            <span className="text-red-500 text-xs" title={pedido.error_message}>Erro</span>
+          ) : (
+            <span className="text-gray-400 text-xs">—</span>
+          )}
+        </td>
+      </tr>
+
+      {expanded && (
+        <tr className="border-b border-gray-100 bg-gray-50">
+          <td colSpan={8} className="px-6 py-4">
+            <ProdutosPedido pedidoId={pedido.id} />
+          </td>
+        </tr>
+      )}
+    </>
+  )
 }
 
 export default function Historico({ refresh }) {
@@ -53,6 +100,7 @@ export default function Historico({ refresh }) {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wide">
+              <th className="pb-2 w-4"></th>
               <th className="pb-2 pr-4">Data</th>
               <th className="pb-2 pr-4">Status</th>
               <th className="pb-2 pr-4">Itens</th>
@@ -64,29 +112,7 @@ export default function Historico({ refresh }) {
           </thead>
           <tbody>
             {data.items.map(p => (
-              <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="py-2 pr-4 text-gray-600 whitespace-nowrap">{formatDate(p.created_at)}</td>
-                <td className="py-2 pr-4"><Badge status={p.status} /></td>
-                <td className="py-2 pr-4 text-gray-700">{p.resumo?.order_items_found ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-700">{p.resumo?.processed_ok ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-700">{p.resumo?.items_with_additional ?? '—'}</td>
-                <td className="py-2 pr-4 text-gray-500">{p.processing_time_seconds ? `${p.processing_time_seconds}s` : '—'}</td>
-                <td className="py-2">
-                  {p.status === 'completed' ? (
-                    <a
-                      href={urlResultado(p.id)}
-                      className="text-blue-600 hover:underline font-medium"
-                      download
-                    >
-                      Baixar
-                    </a>
-                  ) : p.status === 'failed' ? (
-                    <span className="text-red-500 text-xs" title={p.error_message}>Erro</span>
-                  ) : (
-                    <span className="text-gray-400 text-xs">—</span>
-                  )}
-                </td>
-              </tr>
+              <PedidoRow key={p.id} pedido={p} />
             ))}
           </tbody>
         </table>

@@ -29,6 +29,12 @@ export async function obterPedido(id) {
   return res.json()
 }
 
+export async function listarProdutosPedido(id) {
+  const res = await fetch(`${BASE}/pedidos/${id}/produtos`)
+  if (!res.ok) throw new Error(`Erro ${res.status}`)
+  return res.json()
+}
+
 export function urlResultado(id) {
   return `${BASE}/pedidos/${id}/resultado`
 }

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from calculator import compute_adjustments, load_template_rows
 from core.config import settings
 from core.exceptions import PedidoValidationError
-from excel_exporter import export_adjustment_excel
+from excel_exporter import export_from_produtos
 from models.pedido import Pedido
 from models.produto_pedido import ProdutoPedido
 from parser_pedido import parse_order_pdf
@@ -95,18 +95,8 @@ def create_pedido(
             pedido.template_excel_key = template_key
             db.commit()
 
-            # Processamento (núcleo existente — sem alteração)
+            # Processamento
             results = compute_adjustments(order_items, stock_data, template_rows)
-
-            export_adjustment_excel(
-                template_path=str(template_path),
-                output_path=str(output_path),
-                results=results,
-            )
-
-            # Upload resultado para GCS
-            resultado_key = _gcs_key(pedido.id, "resultado.xlsx")
-            storage.upload(str(output_path), resultado_key)
 
             resumo = {
                 "order_items_found": len(order_items),
@@ -118,11 +108,12 @@ def create_pedido(
                 ),
             }
 
-            # Persistir itens do pedido na tabela produtos_pedido
+            # Persistir itens na tabela produtos_pedido antes de gerar o Excel
+            produtos_db = []
             for r in results:
                 qp = r.get("suggested_packs", 0) or 0
                 qa = r.get("additional_packs", 0) or 0
-                db.add(ProdutoPedido(
+                produto = ProdutoPedido(
                     pedido_id=pedido.id,
                     codigo=r.get("template_code") or r.get("code", ""),
                     descricao=r.get("template_description") or r.get("description", ""),
@@ -132,7 +123,22 @@ def create_pedido(
                     qa=qa,
                     total=qp + qa,
                     status=r.get("status", "ok"),
-                ))
+                )
+                db.add(produto)
+                produtos_db.append(produto)
+
+            db.flush()  # garante que os objetos têm IDs sem fechar a transação
+
+            # Gerar Excel a partir dos registros do banco
+            export_from_produtos(
+                template_path=str(template_path),
+                output_path=str(output_path),
+                produtos=produtos_db,
+            )
+
+            # Upload resultado para GCS
+            resultado_key = _gcs_key(pedido.id, "resultado.xlsx")
+            storage.upload(str(output_path), resultado_key)
 
             pedido.status = "completed"
             pedido.resultado_excel_key = resultado_key
