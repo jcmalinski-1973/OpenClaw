@@ -7,6 +7,7 @@ from fastapi.responses import Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from core.exceptions import PedidoValidationError
 from db.session import get_db
 from models.pedido import Pedido
 from schemas.pedido import PedidoDetalheResponse, PedidoListResponse, PedidoResponse
@@ -24,16 +25,19 @@ async def criar_pedido(
     template_xlsx: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    pedido = create_pedido(
-        db=db,
-        storage=get_storage(),
-        pedido_pdf_bytes=await pedido_pdf.read(),
-        relatorio_pdf_bytes=await relatorio_pdf.read(),
-        template_excel_bytes=await template_xlsx.read(),
-        pedido_pdf_name=pedido_pdf.filename or "pedido.pdf",
-        relatorio_pdf_name=relatorio_pdf.filename or "relatorio.pdf",
-        template_excel_name=template_xlsx.filename or "template.xlsx",
-    )
+    try:
+        pedido = create_pedido(
+            db=db,
+            storage=get_storage(),
+            pedido_pdf_bytes=await pedido_pdf.read(),
+            relatorio_pdf_bytes=await relatorio_pdf.read(),
+            template_excel_bytes=await template_xlsx.read(),
+            pedido_pdf_name=pedido_pdf.filename or "pedido.pdf",
+            relatorio_pdf_name=relatorio_pdf.filename or "relatorio.pdf",
+            template_excel_name=template_xlsx.filename or "template.xlsx",
+        )
+    except PedidoValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.message)
     return pedido
 
 
